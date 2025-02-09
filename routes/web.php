@@ -1,10 +1,12 @@
 <?php
     use App\Controllers\BaseControllers;
+    use App\Controllers\CategoryController;
     use App\Controllers\TaskController;
     use App\Views\View;
     
     $controller = new TaskController();
     $baseContoller = new BaseControllers();
+    $categoryController = new CategoryController();
     $config = require __DIR__ .'/../config/config.php';
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         // Accéder à la liste des tâches
@@ -25,6 +27,9 @@
         }
         elseif($_SERVER['REQUEST_URI'] === '/POO/task-manager/public/base'){
             $baseContoller->index();
+        }
+        elseif($_SERVER['REQUEST_URI'] === '/POO/task-manager/public/category'){
+            $categoryController->index();
         } 
         // Si l'URL ne correspond à aucune route
         else {
