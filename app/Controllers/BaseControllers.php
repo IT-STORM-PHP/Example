@@ -10,8 +10,8 @@
         }
 
         public function index(){
-            #return View::render('index', ['nom'=>"Godwill OUSSOU", "age"=>"45"]);
-            $data = [
+            return View::render('index', ['nom'=>"Godwill OUSSOU", "age"=>"45"]);
+            /* $data = [
                 'success' => true,
                 'message' => 'Opération réussie',
                 'tasks' => [
@@ -19,7 +19,7 @@
                     ['id' => 2, 'title' => 'Réviser le code PHP']
                 ]
             ];
-            return View::jsonResponse($data, '200');
+            return View::jsonResponse($data, '200'); */
         }
     }
 ?>
