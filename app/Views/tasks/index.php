@@ -13,6 +13,8 @@
             <tr>
                 <th>Titre</th>
                 <th>Description</th>
+                <th>Status</th>
+                <th>Ajouté le</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -21,6 +23,16 @@
                 <tr>
                     <td><?= htmlspecialchars($task['title']) ?></td>
                     <td><?= htmlspecialchars($task['description']) ?></td>
+                    <td> 
+                        <?php
+                            if ($task["status"] == 0){
+                                echo "En cours";
+                            }else {
+                                echo "Terminée";
+                            }
+                        ?>
+                    </td>
+                    <td><?= htmlspecialchars($task['created_at']) ?></td>
                     <td>
                         <a href="/POO/task-manager/public/tasks/<?= $task['id'] ?>">Voir</a> | 
                         <a href="/POO/task-manager/public/tasks/<?= $task['id'] ?>/edit">Modifier</a> | 

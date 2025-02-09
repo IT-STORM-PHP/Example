@@ -30,7 +30,7 @@
             return View::render('tasks/edit', ['task' => $task]);
         }
         public function update($id){
-            $this->taskModel->update($id, $_POST['title'], $_POST['description']);
+            $this->taskModel->update($id, $_POST['title'], $_POST['description'], $_POST['status']);
             return View::redirect('/POO/task-manager/public/tasks');
         }
         public function destroy($id){

@@ -1,8 +1,11 @@
 <?php
+    use App\Controllers\BaseControllers;
     use App\Controllers\TaskController;
-
+    use App\Views\View;
+    
     $controller = new TaskController();
-
+    $baseContoller = new BaseControllers();
+    $config = require __DIR__ .'/../config/config.php';
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         // Accéder à la liste des tâches
         if ($_SERVER['REQUEST_URI'] === '/POO/task-manager/public/tasks') {
@@ -19,10 +22,19 @@
         // Modifier une tâche
         elseif (preg_match('#^/POO/task-manager/public/tasks/(\d+)/edit$#', $_SERVER['REQUEST_URI'], $matches)) {
             $controller->edit($matches[1]);
+        }
+        elseif($_SERVER['REQUEST_URI'] === '/POO/task-manager/public/base'){
+            $baseContoller->index();
         } 
         // Si l'URL ne correspond à aucune route
         else {
-            echo 'Page not found!';
+            echo 'Page non trouvé';
+
+            return View::render("errors/index", [
+                "message" => $config['errors_route_message'],
+                "url" => $_SERVER['REQUEST_URI'],
+                "folder" => __FILE__,
+            ]);
         }
     } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Ajouter une nouvelle tâche

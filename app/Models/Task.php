@@ -18,9 +18,9 @@
             $stmt = $this->db->prepare("INSERT INTO tasks (title, description) VALUES (?, ?)");
             return $stmt->execute([$title, $description]);
         }
-        public function update($id, $title, $description){
-            $stmt = $this->db->prepare("UPDATE tasks SET title = ?, description = ? WHERE id = ?");
-            return $stmt->execute([$title, $description, $id]);
+        public function update($id, $title, $description, $status){
+            $stmt = $this->db->prepare("UPDATE tasks SET title = ?, description = ?, status = ? WHERE id = ?");
+            return $stmt->execute([$title, $description, $status, $id]);
         }
         public function delete($id){
             $stmt = $this->db->prepare("DELETE FROM tasks WHERE id = ?");
