@@ -1,0 +1,1 @@
+Charger les fichier composer de l'autoload : composer dump-autoload
