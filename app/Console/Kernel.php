@@ -228,6 +228,14 @@ class Kernel
     $modelContent .= "        return \$stmt->execute();\n";
     $modelContent .= "    }\n";
 
+    //Méthode Get All
+    $modelContent.= "\n     public function getAll()\n      {\n";
+    $modelContent.= "           \$pdo = \App\Models\Database::getInstance()->getConnection();\n";
+    $modelContent.= "           \$sql = \"SELECT * FROM " . strtolower($model) ." \";\n";
+    $modelContent.= "           \$stmt = \$pdo->query(\$sql);\n";
+    $modelContent.= "           return \$stmt->fetchAll(); \n";
+    $modelContent.= "     }\n";
+
     // Méthode Read (find by id)
     $modelContent .= "\n    public static function read(\$id)\n    {\n";
     $modelContent .= "        \$pdo = \App\Models\Database::getInstance()->getConnection();\n";
