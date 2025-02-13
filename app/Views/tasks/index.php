@@ -5,7 +5,7 @@
 </head>
 <body>
     <h1>Liste des tâches</h1>
-    <a href="/POO/task-manager/public/tasks/create">Ajouter une tâche</a>
+    <a href="/task/create">Ajouter une tâche</a>
     
     <!-- Tableau pour afficher les tâches -->
     <table border="1" cellspacing="0" cellpadding="0">
@@ -34,9 +34,9 @@
                     </td>
                     <td><?= htmlspecialchars($task['created_at']) ?></td>
                     <td>
-                        <a href="/POO/task-manager/public/tasks/<?= $task['id'] ?>">Voir</a> | 
-                        <a href="/POO/task-manager/public/tasks/<?= $task['id'] ?>/edit">Modifier</a> | 
-                        <form action="/POO/task-manager/public/tasks/<?= $task['id'] ?>/delete" method="POST" style="display:inline;">
+                        <a href="/task/<?= $task['id'] ?>">Voir</a> | 
+                        <a href="/task/<?= $task['id'] ?>/edit">Modifier</a> | 
+                        <form action="/task/<?= $task['id'] ?>/delete" method="POST" style="display:inline;">
                             <button type="submit">Supprimer</button>
                         </form>
                     </td>

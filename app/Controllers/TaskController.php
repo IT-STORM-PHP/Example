@@ -23,7 +23,7 @@
         }
         public function store(){
             $this->taskModel->create($_POST['title'], $_POST['description']);
-            return View::redirect('/POO/task-manager/public/tasks');
+            return View::redirect('/tasks');
         }
         public function edit($id){
             $task = $this->taskModel->find($id);
@@ -31,12 +31,12 @@
         }
         public function update($id){
             $this->taskModel->update($id, $_POST['title'], $_POST['description'], $_POST['status']);
-            return View::redirect('/POO/task-manager/public/tasks');
+            return View::redirect('/tasks');
         }
         public function destroy($id){
             $this->taskModel->delete($id);
             echo 'Task deleted!';
-            return View::redirect('/POO/task-manager/public/tasks');
+            return View::redirect('/tasks');
         }
     }
     //var_dump(class_exists('App\Controllers\TaskController'));

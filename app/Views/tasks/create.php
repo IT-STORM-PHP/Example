@@ -5,7 +5,7 @@
 </head>
 <body>
     <h1>Créer une nouvelle tâche</h1>
-    <form action="/POO/task-manager/public/tasks/store" method="POST">
+    <form action="/task/store" method="POST">
         <label>Titre :</label>
         <input type="text" name="title" required>
         <label>Description :</label>

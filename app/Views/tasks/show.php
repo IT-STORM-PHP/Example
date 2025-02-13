@@ -21,6 +21,6 @@
             }
         ?>
     </p>
-    <a href="/POO/task-manager/public/tasks">Retour</a>
+    <a href="/tasks">Retour</a>
 </body>
 </html>

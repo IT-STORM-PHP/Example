@@ -2,7 +2,6 @@
     namespace App\Controllers;
     use App\Models\Category;
     use App\Views\View;
-use Stringable;
 
     class CategoryController{
         private $categoryModel;
@@ -17,6 +16,7 @@ use Stringable;
                 'status'=>true,
                 'category'=>$allCategory,
                 'message'=>"Résultats",
+                ''=>"valeur"
             ];
             return View::jsonResponse($data, 200);
         }    

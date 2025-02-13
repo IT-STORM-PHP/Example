@@ -1,7 +1,7 @@
 <?php
     putenv('ENV=test');
     return [
-        'db_host' => 'localhost',
+        'db_host' => '127.0.0.1',
         'db_name' => 'tp_mvc',
         'db_user' => 'root',
         'db_pass' => '',

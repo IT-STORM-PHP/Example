@@ -1,6 +1,7 @@
 <?php
     namespace App\Models;
 
+    
     class Category{
         private $db;
 
@@ -9,7 +10,7 @@
         }
 
         public function getAll(){
-            $stmt = $this->db->query("SELECT * FROM categorie ORDER BY created_at ASC");
+            $stmt = $this->db->query("SELECT * FROM categorie ORDER BY created_at DESC");
             return $stmt->fetchAll();
         }
         public function find($id){
