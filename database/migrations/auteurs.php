@@ -5,13 +5,14 @@ namespace Database\Migrations;
 use App\Schema\Blueprint;
 use App\Database\Migration;
 
-class Ismael extends Migration
+class Auteurs extends Migration
 {
     public function up()
     {
-        $table = new Blueprint('table_name');
+        $table = new Blueprint('autheurs');
         $table->id();
-        $table->string('name');
+        $table->string('nom');
+        $table->string("prenom");
         $table->timestamps();
         $this->executeSQL($table->getSQL());
     }

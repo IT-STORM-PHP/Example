@@ -183,10 +183,18 @@ class Kernel
 
     protected function makeCrud($model)
 {
+    if (!$model) {
+        echo "❌ Veuillez fournir un nom pour le modèle.\n";
+        return;
+    }
+
+    // Mettre la première lettre en majuscule
+    $model = ucfirst($model);
+
     // 1. Vérifier si la migration existe pour ce modèle
     $pdo = \App\Models\Database::getInstance()->getConnection();
     $stmt = $pdo->prepare("SELECT * FROM migrations WHERE migration_name = :model");
-    $stmt->execute(['model' => $model]);
+    $stmt->execute(['model' => strtolower($model)]); // Comparaison en minuscule
 
     if ($stmt->rowCount() === 0) {
         echo "❌ Aucune migration trouvée pour le modèle '$model'.\n";
@@ -194,7 +202,7 @@ class Kernel
     }
 
     // 2. Récupérer la structure de la table
-    $stmt = $pdo->prepare("DESCRIBE $model");
+    $stmt = $pdo->prepare("DESCRIBE " . strtolower($model));
     $stmt->execute();
     $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -202,7 +210,7 @@ class Kernel
     $modelContent = "<?php\n\nnamespace App\Models;\n\n";
     $modelContent .= "use PDO;\n";
     $modelContent .= "use App\Models\Model;\n\n";
-    $modelContent .= "class " . ucfirst($model) . " extends Model\n{\n";
+    $modelContent .= "class {$model} extends Model\n{\n";
 
     // Ajouter les attributs du modèle
     foreach ($columns as $column) {
@@ -212,7 +220,7 @@ class Kernel
     // Méthode Create
     $modelContent .= "\n    public function create(\$data)\n    {\n";
     $modelContent .= "        \$pdo = \App\Models\Database::getInstance()->getConnection();\n";
-    $modelContent .= "        \$sql = \"INSERT INTO $model (" . implode(", ", array_column($columns, 'Field')) . ") VALUES (:" . implode(", :", array_column($columns, 'Field')) . ")\";\n";
+    $modelContent .= "        \$sql = \"INSERT INTO " . strtolower($model) . " (" . implode(", ", array_column($columns, 'Field')) . ") VALUES (:" . implode(", :", array_column($columns, 'Field')) . ")\";\n";
     $modelContent .= "        \$stmt = \$pdo->prepare(\$sql);\n";
     foreach ($columns as $column) {
         $modelContent .= "        \$stmt->bindParam(':{$column['Field']}', \$data['{$column['Field']}']);\n";
@@ -223,7 +231,7 @@ class Kernel
     // Méthode Read (find by id)
     $modelContent .= "\n    public static function read(\$id)\n    {\n";
     $modelContent .= "        \$pdo = \App\Models\Database::getInstance()->getConnection();\n";
-    $modelContent .= "        \$sql = \"SELECT * FROM $model WHERE id = :id\";\n";
+    $modelContent .= "        \$sql = \"SELECT * FROM " . strtolower($model) . " WHERE id = :id\";\n";
     $modelContent .= "        \$stmt = \$pdo->prepare(\$sql);\n";
     $modelContent .= "        \$stmt->bindParam(':id', \$id);\n";
     $modelContent .= "        \$stmt->execute();\n";
@@ -233,7 +241,7 @@ class Kernel
     // Méthode Update
     $modelContent .= "\n    public function update(\$id, \$data)\n    {\n";
     $modelContent .= "        \$pdo = \App\Models\Database::getInstance()->getConnection();\n";
-    $modelContent .= "        \$sql = \"UPDATE $model SET ";
+    $modelContent .= "        \$sql = \"UPDATE " . strtolower($model) . " SET ";
     $modelContent .= implode(", ", array_map(fn($col) => "{$col['Field']} = :{$col['Field']}", $columns));
     $modelContent .= " WHERE id = :id\";\n";
     $modelContent .= "        \$stmt = \$pdo->prepare(\$sql);\n";
@@ -247,7 +255,7 @@ class Kernel
     // Méthode Delete
     $modelContent .= "\n    public function delete(\$id)\n    {\n";
     $modelContent .= "        \$pdo = \App\Models\Database::getInstance()->getConnection();\n";
-    $modelContent .= "        \$sql = \"DELETE FROM $model WHERE id = :id\";\n";
+    $modelContent .= "        \$sql = \"DELETE FROM " . strtolower($model) . " WHERE id = :id\";\n";
     $modelContent .= "        \$stmt = \$pdo->prepare(\$sql);\n";
     $modelContent .= "        \$stmt->bindParam(':id', \$id);\n";
     $modelContent .= "        return \$stmt->execute();\n";
@@ -262,6 +270,7 @@ class Kernel
 }
 
 
+
 protected function makeController($controllerName)
 {
     if (!$controllerName) {
@@ -269,7 +278,10 @@ protected function makeController($controllerName)
         exit(1);
     }
 
-    // Créer le nom du fichier et le chemin complet
+    // Mettre la première lettre en majuscule
+    $controllerName = ucfirst($controllerName);
+
+    // Chemin du fichier
     $filePath = "app/Controllers/{$controllerName}.php";
 
     // Vérifier si le contrôleur existe déjà
@@ -280,7 +292,7 @@ protected function makeController($controllerName)
 
     // Contenu du contrôleur
     $content = "<?php\n\nnamespace App\Controllers;\n\n";
-    $content .= "use App\Controller\Controller;\n\n";
+    $content .= "use App\Controller\Controllers;\n\n";
     $content .= "class {$controllerName} extends Controller\n{\n";
     $content .= "    public function index()\n    {\n";
     $content .= "        // Action par défaut\n";
@@ -288,11 +300,12 @@ protected function makeController($controllerName)
     $content .= "    }\n";
     $content .= "}\n";
 
-    // Créer le fichier du contrôleur et y écrire le contenu
+    // Créer le fichier du contrôleur
     file_put_contents($filePath, $content);
 
     echo "✅ Contrôleur '$controllerName' créé dans 'app/Controllers'.\n";
 }
+
 
 
     protected function showUsage()

@@ -3,6 +3,7 @@
     use App\Controllers\TaskController;
     use App\Controllers\BaseControllers;
     use App\Controllers\CategoryController;
+    use App\Controllers\AutheurController;
 
     Route::get('/tasks', [TaskController::class, 'index']);
     Route::get('/task/{id}', [TaskController::class, 'show']);
@@ -10,6 +11,8 @@
     Route::get('/base', [BaseControllers::class, 'index']);
     #Route::get('/POO/task-manager/public/category', [CategoryController::class, 'index']);
     Route::get('/task/create', [TaskController::class, 'create']);
+
+    Route::post('/autheurs', [AutheurController::class, 'index']);
 
     Route::post('/task/store', [TaskController::class, 'store']);
     Route::post('/task/{id}', [TaskController::class, 'update']);
