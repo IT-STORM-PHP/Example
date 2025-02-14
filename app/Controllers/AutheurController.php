@@ -16,14 +16,14 @@ class AutheurController extends Controller
     public function index()
     {
         $request = new Request();
-        /*$donnee = [
+        $donnee = [
             "nom"=>"ok",
             "prenom"=>"qsfed"
         ];
         // Action par défaut
         echo 'Hello from AutheurController Controller';
         $this->autheur->create($donnee);
-        echo "enregistré avec succè";  */
+        echo "enregistré avec succè";  
         $autheurs = $this->autheur->read(1); 
         echo $autheurs['nom'];
         echo $autheurs['prenom'];

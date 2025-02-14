@@ -32,14 +32,28 @@ class Kernel
     }
 
     protected function serve()
-    {
-        $port = 8000;
-        while (@fsockopen('127.0.0.1', $port)) {
-            $port++;
+{
+    global $argv;
+    
+    $host = "127.0.0.1"; // Valeur par défaut
+    $port = 8000;        // Valeur par défaut
+
+    foreach ($argv as $arg) {
+        if (strpos($arg, '--host=') === 0) {
+            $host = substr($arg, 7);
+        } elseif (strpos($arg, '--port=') === 0) {
+            $port = (int) substr($arg, 7);
         }
-        echo "Démarrage du serveur local sur http://127.0.0.1:$port\n";
-        exec("php -S 127.0.0.1:$port -t public");
     }
+
+    while (!@stream_socket_server("tcp://$host:$port")) {
+        $port++; // Incrémente si le port est occupé
+    }
+
+    $cmd = "php -S $host:$port -t public";
+    echo "Serveur démarré sur http://$host:$port\n";
+    exec($cmd);
+}
 
     protected function makeMigration($name)
     {
@@ -205,12 +219,34 @@ class Kernel
     $stmt = $pdo->prepare("DESCRIBE " . strtolower($model));
     $stmt->execute();
     $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $modelLower = strtolower($model);
+    // 3. Créer le dossier pour les vues
+    $viewDir = __DIR__ . "../../Views/{$modelLower}";
+    if (!is_dir($viewDir)) {
+        mkdir($viewDir, 0777, true);
+    }
+
+    // Créer les vues pour la liste, la création, la modification et la suppression
+    $this->createCrudViews($viewDir, $model, $columns);
+
+    // 4. Ajouter les routes dans `routes/web.php`
+    $this->addRoutesToWeb($model);
+
+    $this->createController($model, $columns);
 
     // 3. Générer le modèle
     $modelContent = "<?php\n\nnamespace App\Models;\n\n";
     $modelContent .= "use PDO;\n";
     $modelContent .= "use App\Models\Model;\n\n";
     $modelContent .= "class {$model} extends Model\n{\n";
+    
+    // Ajouter l'attribut privé pour PDO
+    $modelContent .= "    private \$pdo;\n\n";
+    
+    // Constructeur
+    $modelContent .= "    public function __construct()\n    {\n";
+    $modelContent .= "        \$this->pdo = \App\Models\Database::getInstance()->getConnection();\n";
+    $modelContent .= "    }\n";
 
     // Ajouter les attributs du modèle
     foreach ($columns as $column) {
@@ -219,28 +255,25 @@ class Kernel
 
     // Méthode Create
     $modelContent .= "\n    public function create(\$data)\n    {\n";
-    $modelContent .= "        \$pdo = \App\Models\Database::getInstance()->getConnection();\n";
     $modelContent .= "        \$sql = \"INSERT INTO " . strtolower($model) . " (" . implode(", ", array_column($columns, 'Field')) . ") VALUES (:" . implode(", :", array_column($columns, 'Field')) . ")\";\n";
-    $modelContent .= "        \$stmt = \$pdo->prepare(\$sql);\n";
+    $modelContent .= "        \$stmt = \$this->pdo->prepare(\$sql);\n";
     foreach ($columns as $column) {
         $modelContent .= "        \$stmt->bindParam(':{$column['Field']}', \$data['{$column['Field']}']);\n";
     }
     $modelContent .= "        return \$stmt->execute();\n";
     $modelContent .= "    }\n";
 
-    //Méthode Get All
-    $modelContent.= "\n     public function getAll()\n      {\n";
-    $modelContent.= "           \$pdo = \App\Models\Database::getInstance()->getConnection();\n";
-    $modelContent.= "           \$sql = \"SELECT * FROM " . strtolower($model) ." \";\n";
-    $modelContent.= "           \$stmt = \$pdo->query(\$sql);\n";
-    $modelContent.= "           return \$stmt->fetchAll(); \n";
-    $modelContent.= "     }\n";
+    // Méthode Get All
+    $modelContent .= "\n    public function getAll()\n    {\n";
+    $modelContent .= "        \$sql = \"SELECT * FROM " . strtolower($model) . "\";\n";
+    $modelContent .= "        \$stmt = \$this->pdo->query(\$sql);\n";
+    $modelContent .= "        return \$stmt->fetchAll();\n";
+    $modelContent .= "    }\n";
 
     // Méthode Read (find by id)
-    $modelContent .= "\n    public static function read(\$id)\n    {\n";
-    $modelContent .= "        \$pdo = \App\Models\Database::getInstance()->getConnection();\n";
+    $modelContent .= "\n    public function read(\$id)\n    {\n";
     $modelContent .= "        \$sql = \"SELECT * FROM " . strtolower($model) . " WHERE id = :id\";\n";
-    $modelContent .= "        \$stmt = \$pdo->prepare(\$sql);\n";
+    $modelContent .= "        \$stmt = \$this->pdo->prepare(\$sql);\n";
     $modelContent .= "        \$stmt->bindParam(':id', \$id);\n";
     $modelContent .= "        \$stmt->execute();\n";
     $modelContent .= "        return \$stmt->fetch(PDO::FETCH_ASSOC);\n";
@@ -248,11 +281,10 @@ class Kernel
 
     // Méthode Update
     $modelContent .= "\n    public function update(\$id, \$data)\n    {\n";
-    $modelContent .= "        \$pdo = \App\Models\Database::getInstance()->getConnection();\n";
     $modelContent .= "        \$sql = \"UPDATE " . strtolower($model) . " SET ";
     $modelContent .= implode(", ", array_map(fn($col) => "{$col['Field']} = :{$col['Field']}", $columns));
     $modelContent .= " WHERE id = :id\";\n";
-    $modelContent .= "        \$stmt = \$pdo->prepare(\$sql);\n";
+    $modelContent .= "        \$stmt = \$this->pdo->prepare(\$sql);\n";
     foreach ($columns as $column) {
         $modelContent .= "        \$stmt->bindParam(':{$column['Field']}', \$data['{$column['Field']}']);\n";
     }
@@ -262,9 +294,8 @@ class Kernel
 
     // Méthode Delete
     $modelContent .= "\n    public function delete(\$id)\n    {\n";
-    $modelContent .= "        \$pdo = \App\Models\Database::getInstance()->getConnection();\n";
     $modelContent .= "        \$sql = \"DELETE FROM " . strtolower($model) . " WHERE id = :id\";\n";
-    $modelContent .= "        \$stmt = \$pdo->prepare(\$sql);\n";
+    $modelContent .= "        \$stmt = \$this->pdo->prepare(\$sql);\n";
     $modelContent .= "        \$stmt->bindParam(':id', \$id);\n";
     $modelContent .= "        return \$stmt->execute();\n";
     $modelContent .= "    }\n";
@@ -277,7 +308,163 @@ class Kernel
     echo "✅ Modèle '$model' avec méthodes CRUD créé.\n";
 }
 
+protected function createCrudViews($viewDir, $model, $columns)
+{
+    $modelLower = strtolower($model);
+    // Vue pour la liste
+    $listViewContent = "<h1>{$model} List</h1>\n";
+    $listViewContent .= "<a href='/{$modelLower}/create'>Create {$model}</a>\n";
+    $listViewContent .= "<table>\n<tr>\n";
+    foreach ($columns as $column) {
+        $listViewContent .= "<th>{$column['Field']}</th>\n";
+    }
+    $listViewContent .= "<th>Actions</th>\n</tr>\n";
+    $listViewContent .= "<?php foreach (\$items as \$item): ?>\n<tr>\n";
+    foreach ($columns as $column) {
+        $listViewContent .= "<td><?php echo \$item['{$column['Field']}']; ?></td>\n";
+    }
+    $listViewContent .= "<td><a href='/{$modelLower}/edit/<?php echo \$item['id']; ?>'>Edit</a> | <form action ='/{$modelLower}/delete/<?php echo \$item['id']; ?>' method='POST'><input type=\"submit\" value=\"Delete\"></form></td>\n</tr>\n";
+    $listViewContent .= "<?php endforeach; ?>\n</table>";
 
+    // Créer le fichier de vue pour la liste
+    file_put_contents("{$viewDir}/index.php", $listViewContent);
+
+    // Vue pour la création
+    $createViewContent = "<h1>Create {$model}</h1>\n";
+    $createViewContent .= "<form method='POST' action='/{$modelLower}/store'>\n";
+    foreach ($columns as $column) {
+        $createViewContent .= "<label for='{$column['Field']}'>{$column['Field']}</label>\n";
+        $createViewContent .= "<input type='text' name='{$column['Field']}' id='{$column['Field']}'><br>\n";
+    }
+    $createViewContent .= "<input type='submit' value='Create {$model}'>\n</form>";
+
+    // Créer le fichier de vue pour la création
+    file_put_contents("{$viewDir}/create.php", $createViewContent);
+
+    // Vue pour la modification
+    $editViewContent = "<h1>Edit {$model}</h1>\n";
+    $editViewContent .= "<form method='POST' action='/{$modelLower}/update/<?php echo \$item['id']; ?>'>\n";
+    foreach ($columns as $column) {
+        $editViewContent .= "<label for='{$column['Field']}'>{$column['Field']}</label>\n";
+        $editViewContent .= "<input type='text' name='{$column['Field']}' value='<?php echo \$item['{$column['Field']}']; ?>' id='{$column['Field']}'><br>\n";
+    }
+    $editViewContent .= "<input type='submit' value='Update {$model}'>\n</form>";
+
+    // Créer le fichier de vue pour la modification
+    file_put_contents("{$viewDir}/edit.php", $editViewContent);
+
+    // Vue pour la suppression
+    $deleteViewContent = "<h1>Are you sure you want to delete this {$modelLower}?</h1>\n";
+    $deleteViewContent .= "<form method='POST' action='/{$modelLower}/delete/<?php echo \$item['id']; ?>'>\n";
+    $deleteViewContent .= "<input type='submit' value='Yes, Delete'>\n</form>";
+    
+    // Créer le fichier de vue pour la suppression
+    file_put_contents("{$viewDir}/delete.php", $deleteViewContent);
+}
+
+protected function addRoutesToWeb($model)
+{
+    $webPath = __DIR__ . '/../../routes/web.php';
+    $controllerClass = ucfirst($model) . 'Controller';
+    $namespaceLine = "use App\Controllers\\$controllerClass;";
+
+    // Convertir $model en minuscule pour l'URL
+    $modelLower = strtolower($model);
+
+
+    // Définition des routes en respectant la syntaxe existante
+    $routes = [
+        "Route::get('/{$modelLower}', [{$controllerClass}::class, 'index']);",
+        "Route::get('/{$modelLower}/create', [{$controllerClass}::class, 'create']);",
+        "Route::post('/{$modelLower}/store', [{$controllerClass}::class, 'store']);",
+        "Route::get('/{$modelLower}/edit/{id}', [{$controllerClass}::class, 'edit']);",
+        "Route::post('/{$modelLower}/update/{id}', [{$controllerClass}::class, 'update']);",
+        "Route::post('/{$modelLower}/delete/{id}', [{$controllerClass}::class, 'destroy']);",
+    ];
+
+    // Lire le contenu actuel du fichier
+    $existingRoutes = file_get_contents($webPath);
+
+    // Vérifier si l'import du contrôleur existe déjà
+    if (!str_contains($existingRoutes, $namespaceLine)) {
+        file_put_contents($webPath, $namespaceLine . "\n", FILE_APPEND);
+    }
+
+    // Vérifier si les routes existent déjà pour éviter les doublons
+    $newRoutes = [];
+    foreach ($routes as $route) {
+        if (!str_contains($existingRoutes, $route)) {
+            $newRoutes[] = $route;
+        }
+    }
+
+    // Ajouter les nouvelles routes si elles n'existent pas déjà
+    if (!empty($newRoutes)) {
+        file_put_contents($webPath, implode("\n", $newRoutes) . "\n", FILE_APPEND);
+        echo "✅ Routes et namespace pour '$controllerClass' ajoutés à 'routes/web.php'.\n";
+    } else {
+        echo "⚠️ Les routes pour '$controllerClass' existent déjà dans 'routes/web.php'.\n";
+    }
+}
+
+
+protected function createController($model, $columns)
+{
+    // Créer le contrôleur
+    $modelLower = strtolower($model);
+    $controllerContent = "<?php\n\nnamespace App\Controllers;\n\n";
+    $controllerContent .= "use App\Models\\{$model};\n";
+    $controllerContent .= "use App\Views\View;\n";
+    $controllerContent .= "use App\Http\Request;\n";
+    $controllerContent .= "class {$model}Controller extends Controller\n{\n";
+    $controllerContent .= "    private \$model, \$request;\n";
+    $controllerContent .= "    public function __construct()\n    {\n";
+    $controllerContent .= "        \$this->model = new {$model}();\n";
+    $controllerContent .= "        \$this->request = new Request();\n";
+    $controllerContent .= "    }\n\n";
+    $controllerContent .= "    public function index()\n    {\n";
+    $controllerContent .= "        // Logique pour afficher la liste\n";
+    $controllerContent .= "        \$items = \$this->model->getAll();\n";
+    $controllerContent .= "        return View::render('{$modelLower}/index', ['items' => \$items]);\n";
+    $controllerContent .= "    }\n";
+    $controllerContent .= "    public function create()\n    {\n";
+    $controllerContent .= "        // Logique pour afficher le formulaire de création\n";
+    $controllerContent .= "        return View::render('{$modelLower}/create');\n";
+    $controllerContent .= "    }\n";
+    $controllerContent .= "    public function store()\n    {\n";
+    $controllerContent .= "        // Logique pour enregistrer l'élément\n";
+    $controllerContent .= "        \$data = [\n";
+    foreach ($columns as $column) {
+        $controllerContent .= "            '{$column['Field']}' => \$this->request->get('{$column['Field']}'),\n";
+    }
+    $controllerContent .= "        ];\n";
+    $controllerContent .= "        \$this->model->create(\$data);\n";
+    $controllerContent .= "        return View::redirect('/{$modelLower}');\n";
+    $controllerContent .= "    }\n";
+    $controllerContent .= "    public function edit(\$id)\n    {\n";
+    $controllerContent .= "        // Logique pour afficher le formulaire de modification\n";
+    $controllerContent .="       \$item = \$this->model->read(\$id);\n";
+    $controllerContent .="       return View::render('{$modelLower}/edit', ['item' => \$item]);\n";
+    $controllerContent .= "    }\n";
+    $controllerContent .= "    public function update(\$id)\n    {\n";
+    $controllerContent .= "        // Logique pour mettre à jour l'élément\n";
+    $controllerContent .= "        \$data = [\n";
+    foreach ($columns as $column) {
+        $controllerContent .= "            '{$column['Field']}' => \$this->request->get('{$column['Field']}'),\n";
+    }
+    $controllerContent .= "        ];\n";
+    $controllerContent .= "        \$this->model->update(\$id, \$data);\n";
+    $controllerContent .= "        return View::redirect('/{$modelLower}');\n";
+    $controllerContent .= "    }\n";
+    $controllerContent .= "    public function destroy(\$id)\n    {\n";
+    $controllerContent .= "        // Logique pour supprimer l'élément\n";
+    $controllerContent .= "        \$this->model->delete(\$id);\n";
+    $controllerContent .= "        return View::redirect('/{$modelLower}');\n";
+    $controllerContent .= "    }\n";
+    $controllerContent .= "}\n";
+    file_put_contents("app/Controllers/{$model}Controller.php", $controllerContent);
+    echo "✅ Contrôleur '$model' créé.\n";
+}
 
 protected function makeController($controllerName)
 {

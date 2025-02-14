@@ -5,22 +5,22 @@ namespace Database\Migrations;
 use App\Schema\Blueprint;
 use App\Database\Migration;
 
-class Auteurs extends Migration
+class Will extends Migration
 {
     public function up()
     {
-        $table = new Blueprint('autheurs');
-        $table->id('id');
-        $table->string('nom');
-        $table->foreign('migrations', 'id', 'migrations', 'CASCADE', 'CASCADE');
-        $table->string("prenom");
+        $table = new Blueprint('will');
+        $table->id();
+        $table->string('name');
+        $table->integer('migrations_name');
+        $table->foreign('migrations_name', 'id', 'migrations', 'CASCADE', 'CASCADE');
         $table->timestamps();
         $this->executeSQL($table->getSQL());
     }
 
     public function down()
     {
-        $table = new Blueprint('table_name');
+        $table = new Blueprint('will');
         $this->executeSQL($table->dropSQL());
     }
 }
